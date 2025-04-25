@@ -2,11 +2,22 @@ const Service = require("../models/serviceModel");
 const catchAsync = require("../utils/catchAsync");
 const mongoose = require("mongoose");
 
-// Helper to validate service fields
+// Define valid days for availability
+const VALID_DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+// Helper to validate service fields including availability
 const validateServiceInput = (data, isUpdate = false) => {
   const errors = [];
 
-  // Only validate if field exists or if it's a creation request (non-update)
+  // Validate title
   if (!isUpdate || (isUpdate && data.hasOwnProperty("title"))) {
     if (
       !data.title ||
@@ -17,6 +28,7 @@ const validateServiceInput = (data, isUpdate = false) => {
     }
   }
 
+  // Validate rate
   if (!isUpdate || (isUpdate && data.hasOwnProperty("rate"))) {
     if (data.rate === undefined || isNaN(data.rate) || Number(data.rate) <= 0) {
       errors.push({
@@ -26,6 +38,7 @@ const validateServiceInput = (data, isUpdate = false) => {
     }
   }
 
+  // Validate description
   if (!isUpdate || (isUpdate && data.hasOwnProperty("description"))) {
     if (
       !data.description ||
@@ -39,12 +52,46 @@ const validateServiceInput = (data, isUpdate = false) => {
     }
   }
 
-  // Note: 'availability' is optional and defaults to true if not provided.
+  // Validate availability (object with startDay and endDay)
+  if (!isUpdate || (isUpdate && data.hasOwnProperty("availability"))) {
+    const avail = data.availability;
+    if (!avail || typeof avail !== "object") {
+      errors.push({
+        field: "availability",
+        message: "Availability must be an object with startDay and endDay.",
+      });
+    } else {
+      const { startDay, endDay } = avail;
+      if (!startDay || !VALID_DAYS.includes(startDay)) {
+        errors.push({
+          field: "availability.startDay",
+          message: `startDay must be one of: ${VALID_DAYS.join(", ")}`,
+        });
+      }
+      if (!endDay || !VALID_DAYS.includes(endDay)) {
+        errors.push({
+          field: "availability.endDay",
+          message: `endDay must be one of: ${VALID_DAYS.join(", ")}`,
+        });
+      }
+      // Ensure startDay precedes endDay
+      if (
+        startDay &&
+        endDay &&
+        VALID_DAYS.indexOf(startDay) > VALID_DAYS.indexOf(endDay)
+      ) {
+        errors.push({
+          field: "availability",
+          message: "startDay must come before endDay in the week.",
+        });
+      }
+    }
+  }
+
   return errors;
 };
 
 exports.createService = async (req, res) => {
-  // Validate request body fields for creation
   const errors = validateServiceInput(req.body);
   if (errors.length) {
     return res.status(400).json({ errors });
@@ -87,7 +134,6 @@ exports.getServiceById = async (req, res) => {
 };
 
 exports.updateService = async (req, res) => {
-  // Validate request body fields (if provided) for update; fields are optional in updates.
   const errors = validateServiceInput(req.body, true);
   if (errors.length) {
     return res.status(400).json({ errors });
@@ -127,6 +173,7 @@ exports.deleteService = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
 exports.searchServices = catchAsync(async (req, res, next) => {
   // 1. Filtering
   const queryObj = { ...req.query };
@@ -203,8 +250,6 @@ exports.searchServices = catchAsync(async (req, res, next) => {
     totalResults,
     page,
     pages: Math.ceil(totalResults / limit),
-    data: {
-      services,
-    },
+    data: { services },
   });
 });

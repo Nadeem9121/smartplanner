@@ -7,7 +7,6 @@ const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 const mongoSanitize = require("express-mongo-sanitize");
 const cookieParser = require("cookie-parser");
-const bodyParser = require("body-parser");
 const compression = require("compression");
 const cors = require("cors");
 
@@ -15,23 +14,23 @@ const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const servicesRouter = require("./routes/servicesRoutes");
 const userRouter = require("./routes/userRoutes");
+const galleryRouter = require("./routes/galleryRoutes");
+const bitRouter = require("./routes/bidRouters");
 
 // Start express app
 const app = express();
 
-// app.enable("trust proxy");
-
-// app.set("view engine", "pug");
-// app.set("views", path.join(__dirname, "views"));
-
 // 1) GLOBAL MIDDLEWARES
+
 // Implement CORS
 app.use(cors());
-
 app.options("*", cors());
 
 // Serving static files
 app.use(express.static(path.join(__dirname, "public")));
+
+// Serve uploaded gallery images publicly
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Set security HTTP headers
 app.use(helmet());
@@ -57,26 +56,30 @@ app.use(cookieParser());
 // Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
 
+// Compress responses
 app.use(compression());
 
 // Test middleware
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
-  // console.log(req.cookies);
   next();
 });
 
-// 3) ROUTES
+// 2) ROUTES
 app.get("/", (req, res) => {
   res.send("Hello, World!");
 });
+app.use("/api/v1/bid", bitRouter);
 app.use("/api/v1/services", servicesRouter);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/gallery", galleryRouter);
 
+// Handle unhandled routes
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
+// Global error handling middleware
 app.use(globalErrorHandler);
 
 module.exports = app;

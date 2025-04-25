@@ -78,7 +78,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   }
 
   // Validate role against allowed values
-  const allowedRoles = ["user", "vendor", "admin"];
+  const allowedRoles = ["user", "vendor"];
   if (!allowedRoles.includes(role)) {
     return next(new AppError("Invalid user role specified.", 400));
   }

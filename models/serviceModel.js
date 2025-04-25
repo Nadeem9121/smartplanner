@@ -1,6 +1,16 @@
 // models/Service.js
 const mongoose = require("mongoose");
 
+const VALID_DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
 const serviceSchema = new mongoose.Schema(
   {
     _id: {
@@ -25,8 +35,17 @@ const serviceSchema = new mongoose.Schema(
       trim: true,
     },
     availability: {
-      type: Boolean,
-      default: true,
+      // Availability window expressed as start and end days of the week
+      startDay: {
+        type: String,
+        enum: VALID_DAYS,
+        required: [true, "Availability start day is required"],
+      },
+      endDay: {
+        type: String,
+        enum: VALID_DAYS,
+        required: [true, "Availability end day is required"],
+      },
     },
   },
   {
@@ -36,12 +55,13 @@ const serviceSchema = new mongoose.Schema(
   }
 );
 
-// Add validation for title uniqueness (optional)
-serviceSchema.path("title").validate(async (value) => {
-  const titleCount = await mongoose.models.Service.countDocuments({
+// Ensure title uniqueness
+serviceSchema.path("title").validate(async function (value) {
+  const count = await mongoose.models.Service.countDocuments({
     title: value,
+    _id: { $ne: this._id },
   });
-  return !titleCount;
+  return count === 0;
 }, "Service title already exists");
 
 const Service = mongoose.model("Service", serviceSchema);
