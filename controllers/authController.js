@@ -68,29 +68,68 @@ exports.googleSignup = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, req, res);
 });
 
-// Sign Up
+// User Sign-Up
 exports.signup = catchAsync(async (req, res, next) => {
-  const { name, email, password, phoneNum, role } = req.body;
+  let { name, email, password, phoneNum, role, categories } = req.body;
 
   // Validate required fields
   if (!name || !email || !password || !phoneNum || !role) {
     return next(new AppError("All fields are required.", 400));
   }
 
-  // Validate role against allowed values
+  // Validate role
   const allowedRoles = ["user", "vendor"];
   if (!allowedRoles.includes(role)) {
     return next(new AppError("Invalid user role specified.", 400));
   }
 
-  // Rest of the validation and user creation...
-  if (!validator.isEmail(email)) {
-    return next(new AppError("Invalid email format.", 400));
+  // Get allowed categories from User schema (corrected line)
+  const allowedCategories = User.schema.path("categories").caster.enumValues;
+
+  // Prepare categories for vendor
+  let userCategories = [];
+  if (role === "vendor") {
+    const allowedCategories = User.schema.path("categories").caster.enumValues;
+    // Normalize categories input
+    if (categories == null) {
+      return next(
+        new AppError("Vendors must specify at least one service category.", 400)
+      );
+    }
+    if (!Array.isArray(categories)) {
+      // Allow single string
+      if (typeof categories === "string") categories = [categories];
+      else {
+        return next(
+          new AppError("Categories must be an array or string.", 400)
+        );
+      }
+    }
+    if (categories.length === 0) {
+      return next(
+        new AppError("Vendors must specify at least one service category.", 400)
+      );
+    }
+    const invalid = categories.filter((c) => !allowedCategories.includes(c));
+    if (invalid.length) {
+      return next(
+        new AppError(`Invalid categories: ${invalid.join(", ")}`, 400)
+      );
+    }
+    userCategories = categories;
   }
 
-  // ... existing password and phone validations ...
+  // Create user
+  const newUser = await User.create({
+    name,
+    email,
+    password,
+    phoneNum,
+    role,
+    categories: userCategories,
+  });
 
-  const newUser = await User.create({ name, email, password, phoneNum, role });
+  // Send JWT
   createSendToken(newUser, 201, req, res);
 });
 

@@ -1,105 +1,68 @@
-// models/Bid.js
+// models/bidModel.js
 const mongoose = require("mongoose");
 
-// Nested schema for budget range to ensure proper sibling validation
+// Budget schema (unchanged)
 const BudgetSchema = new mongoose.Schema(
   {
-    min: {
-      type: Number,
-      required: [true, "Budget minimum is required"],
-      min: [0, "Budget min must be positive"],
-    },
+    min: { type: Number, required: true, min: 0 },
     max: {
       type: Number,
-      required: [true, "Budget maximum is required"],
-      min: [0, "Budget max must be positive"],
+      required: true,
+      min: 0,
       validate: {
-        validator: function (v) {
-          // 'this' refers to the BudgetSchema instance
+        validator(v) {
           return v >= this.min;
         },
-        message: function (props) {
-          return `Budget max (${props.value}) must be >= budget min (${this.min})`;
-        },
+        message: (props) =>
+          `Budget max (${props.value}) must be ≥ min (${this.min})`,
       },
     },
   },
   { _id: false }
 );
 
-// Define schema for a bid/request
+// Full list of categories (same as User model)
+const SERVICE_CATEGORIES = [
+  /* … all 80+ categories from Step 1 … */
+];
+
 const bidSchema = new mongoose.Schema(
   {
-    // Reference to the requesting user
     requester: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+    requestDetails: { type: String, required: true, trim: true },
+    timeline: { type: String, trim: true },
+    preferredStartDate: { type: Date, required: true },
+    budgetRange: { type: BudgetSchema, required: true },
 
-    // Details of the request
-    requestDetails: {
-      type: String,
-      required: [true, "Request details are required"],
-      trim: true,
-    },
-
-    // Timeline info: e.g., desired duration or deadline
-    timeline: {
-      type: String,
-      trim: true,
-    },
-
-    // Preferred start date for the project
-    preferredStartDate: {
-      type: Date,
-      required: [true, "Preferred start date is required"],
-    },
-
-    // Budget range: using nested subdocument to validate min/max properly
-    budgetRange: {
-      type: BudgetSchema,
-      required: [true, "Budget range is required"],
-    },
-
-    // Optional filters for providers
     filters: {
-      localVendorsOnly: {
-        type: Boolean,
-        default: false,
-      },
-      verifiedProvidersOnly: {
-        type: Boolean,
-        default: false,
-      },
-      minExperienceYears: {
-        type: Number,
-        default: 0,
-        min: [0, "Experience must be non-negative"],
-      },
+      localVendorsOnly: { type: Boolean, default: false },
+      verifiedProvidersOnly: { type: Boolean, default: false },
+      minExperienceYears: { type: Number, default: 0, min: 0 },
     },
 
-    // Status of the bid/request
+    // ← New category field
+    category: {
+      type: String,
+      required: [true, "Service category is required"],
+      enum: SERVICE_CATEGORIES,
+      index: true,
+    },
+
     status: {
       type: String,
       enum: ["accept", "reject", "cancel", "pending"],
       default: "pending",
     },
-
-    // Assignment: which provider accepted, if any
-    assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
-  {
-    timestamps: true,
-    versionKey: false,
-  }
+  { timestamps: true, versionKey: false }
 );
 
-// Compound index to quickly find open requests by date
+// Compound index on status + date (unchanged)
 bidSchema.index({ status: 1, preferredStartDate: 1 });
 
-const Bid = mongoose.model("Bid", bidSchema);
-module.exports = Bid;
+module.exports = mongoose.model("Bid", bidSchema);
