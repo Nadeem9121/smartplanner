@@ -1,4 +1,5 @@
 const Chat = require("../models/chatModel"); // Import the Chat model
+const User = require("../models/userModel");
 
 let onlineUsers = {}; // This will store the userId -> socketId mapping
 
@@ -112,10 +113,45 @@ const getMessages = async (req, res) => {
     });
   }
 };
+const getMessagedUsers = async (req, res) => {
+  try {
+    const currentUserId = req.user.id; // ID from the logged-in user (set by auth middleware)
+
+    // Find all chats where the user is either sender or receiver
+    const chats = await Chat.find({
+      $or: [{ sender: currentUserId }, { receiver: currentUserId }],
+    }).select("sender receiver");
+
+    const userIds = new Set();
+    chats.forEach((chat) => {
+      if (chat.sender.toString() !== currentUserId)
+        userIds.add(chat.sender.toString());
+      if (chat.receiver.toString() !== currentUserId)
+        userIds.add(chat.receiver.toString());
+    });
+
+    // Fetch user profiles (excluding password)
+    const users = await User.find({ _id: { $in: [...userIds] } }).select(
+      "-password"
+    );
+
+    return res.status(200).json({
+      status: "success",
+      results: users.length,
+      users,
+    });
+  } catch (error) {
+    console.error("Error getting messaged users:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Failed to get messaged users",
+    });
+  }
+};
 
 // Function to get the socket ID by userId
 const getSocketIdByUserId = (userId) => {
   return onlineUsers[userId]; // Access the onlineUsers map for socketId
 };
 
-module.exports = { sendMessage, getMessages, initSocket };
+module.exports = { getMessagedUsers, sendMessage, getMessages, initSocket };
