@@ -35,6 +35,7 @@
     "openai": "^4.96.0",
     "sharp": "^0.32.1",
     "slugify": "^1.6.6",
+    "socket.io": "^4.8.1",
     "validator": "^13.7.0",
     "wink-naive-bayes-text-classifier": "^2.2.1",
     "wink-nlp": "^2.3.2"

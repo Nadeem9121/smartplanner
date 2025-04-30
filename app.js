@@ -10,12 +10,14 @@ const cookieParser = require("cookie-parser");
 const compression = require("compression");
 const cors = require("cors");
 
+// Importing socket.io server (Note: We're handling socket.io in server.js, so no need to initialize it here)
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const servicesRouter = require("./routes/servicesRoutes");
 const userRouter = require("./routes/userRoutes");
 const galleryRouter = require("./routes/galleryRoutes");
 const bitRouter = require("./routes/bidRouters");
+const chatRouter = require("./routes/chatRouter");
 
 // Start express app
 const app = express();
@@ -73,7 +75,7 @@ app.use("/api/v1/bid", bitRouter);
 app.use("/api/v1/services", servicesRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/gallery", galleryRouter);
-
+app.use("/api/v1/chat", chatRouter);
 // Handle unhandled routes
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
