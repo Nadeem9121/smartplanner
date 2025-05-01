@@ -1,27 +1,18 @@
-// models/Service.js
 const mongoose = require("mongoose");
 
-const VALID_DAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
+const VALID_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 const serviceSchema = new mongoose.Schema(
   {
     _id: {
-      type: mongoose.Schema.Types.ObjectId, // Explicitly enforce ObjectId type
-      auto: true, // Let MongoDB generate the ID automatically
+      type: mongoose.Schema.Types.ObjectId,
+      auto: true,
     },
     title: {
       type: String,
       required: [true, "Service title is required"],
       trim: true,
-      index: true, // Add index for faster queries
+      index: true,
     },
     rate: {
       type: Number,
@@ -34,23 +25,28 @@ const serviceSchema = new mongoose.Schema(
       required: [true, "Service description is required"],
       trim: true,
     },
-    availability: {
-      // Availability window expressed as start and end days of the week
-      startDay: {
-        type: String,
-        enum: VALID_DAYS,
-        required: [true, "Availability start day is required"],
+    availability: [
+      {
+        // Modify to support a time range for Monday to Friday.
+        // If day is 'Monday-Friday', it will apply to all weekdays.
+        day: {
+          type: String,
+          enum: [...VALID_DAYS, "Monday-Friday"], // Add "Monday-Friday" as a valid option
+          required: true,
+        },
+        startTime: {
+          type: String, // Format: "HH:mm"
+          required: true,
+        },
+        endTime: {
+          type: String, // Format: "HH:mm"
+          required: true,
+        },
       },
-      endDay: {
-        type: String,
-        enum: VALID_DAYS,
-        required: [true, "Availability end day is required"],
-      },
-    },
+    ],
   },
   {
     timestamps: true,
-    // Disable versionKey if not needed
     versionKey: false,
   }
 );

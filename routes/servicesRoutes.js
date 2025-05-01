@@ -19,4 +19,11 @@ router.post("/", restrictTo("vendor"), serviceController.createService);
 router.put("/:id", restrictTo("vendor"), serviceController.updateService);
 router.delete("/:id", restrictTo("vendor"), serviceController.deleteService);
 
+// Update service availability time for a specific service
+router.patch(
+  "/:id/availability-time",
+  restrictTo("vendor"),
+  serviceController.updateServiceAvailabilityTime
+);
+
 module.exports = router;

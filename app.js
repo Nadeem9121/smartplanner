@@ -18,6 +18,7 @@ const userRouter = require("./routes/userRoutes");
 const galleryRouter = require("./routes/galleryRoutes");
 const bitRouter = require("./routes/bidRouters");
 const chatRouter = require("./routes/chatRouter");
+const reviewRouter = require("./routes/reviewRouter");
 
 // Start express app
 const app = express();
@@ -76,6 +77,8 @@ app.use("/api/v1/services", servicesRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/gallery", galleryRouter);
 app.use("/api/v1/chat", chatRouter);
+app.use("/api/v1/reviews", reviewRouter);
+
 // Handle unhandled routes
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

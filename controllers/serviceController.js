@@ -11,9 +11,13 @@ const VALID_DAYS = [
   "Thursday",
   "Friday",
   "Saturday",
+  "Monday-Friday", // Add "Monday-Friday" as a valid option
 ];
 
-// Helper to validate service fields including availability
+// Helper function to validate time format
+const isValidTime = (time) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
+
+// Helper function to validate service fields including availability
 const validateServiceInput = (data, isUpdate = false) => {
   const errors = [];
 
@@ -52,45 +56,61 @@ const validateServiceInput = (data, isUpdate = false) => {
     }
   }
 
-  // Validate availability (object with startDay and endDay)
+  // Validate availability (array of { day, startTime, endTime })
   if (!isUpdate || (isUpdate && data.hasOwnProperty("availability"))) {
     const avail = data.availability;
-    if (!avail || typeof avail !== "object") {
+    if (!Array.isArray(avail)) {
       errors.push({
         field: "availability",
-        message: "Availability must be an object with startDay and endDay.",
+        message: "Availability must be an array of { day, startTime, endTime }",
       });
     } else {
-      const { startDay, endDay } = avail;
-      if (!startDay || !VALID_DAYS.includes(startDay)) {
-        errors.push({
-          field: "availability.startDay",
-          message: `startDay must be one of: ${VALID_DAYS.join(", ")}`,
-        });
-      }
-      if (!endDay || !VALID_DAYS.includes(endDay)) {
-        errors.push({
-          field: "availability.endDay",
-          message: `endDay must be one of: ${VALID_DAYS.join(", ")}`,
-        });
-      }
-      // Ensure startDay precedes endDay
-      if (
-        startDay &&
-        endDay &&
-        VALID_DAYS.indexOf(startDay) > VALID_DAYS.indexOf(endDay)
-      ) {
-        errors.push({
-          field: "availability",
-          message: "startDay must come before endDay in the week.",
-        });
-      }
+      avail.forEach((slot, i) => {
+        if (slot.day === "Monday-Friday") {
+          // Handle "Monday-Friday" as individual days
+          const weekdays = [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+          ];
+          weekdays.forEach((day) => {
+            avail.push({
+              day,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+            });
+          });
+          return; // Skip the current loop since we've already added individual days
+        }
+
+        if (!slot.day || !VALID_DAYS.includes(slot.day)) {
+          errors.push({
+            field: `availability[${i}].day`,
+            message: `Day must be one of: ${VALID_DAYS.join(", ")}`,
+          });
+        }
+        if (!slot.startTime || !isValidTime(slot.startTime)) {
+          errors.push({
+            field: `availability[${i}].startTime`,
+            message: "startTime must be in HH:mm format",
+          });
+        }
+        if (!slot.endTime || !isValidTime(slot.endTime)) {
+          errors.push({
+            field: `availability[${i}].endTime`,
+            message: "endTime must be in HH:mm format",
+          });
+        }
+      });
     }
   }
 
   return errors;
 };
 
+// Create a new service
 exports.createService = async (req, res) => {
   const errors = validateServiceInput(req.body);
   if (errors.length) {
@@ -107,6 +127,7 @@ exports.createService = async (req, res) => {
   }
 };
 
+// Get all services
 exports.getServices = async (req, res) => {
   try {
     const services = await Service.find();
@@ -117,6 +138,7 @@ exports.getServices = async (req, res) => {
   }
 };
 
+// Get a single service by ID
 exports.getServiceById = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -133,6 +155,7 @@ exports.getServiceById = async (req, res) => {
   }
 };
 
+// Update service
 exports.updateService = async (req, res) => {
   const errors = validateServiceInput(req.body, true);
   if (errors.length) {
@@ -158,6 +181,7 @@ exports.updateService = async (req, res) => {
   }
 };
 
+// Delete service
 exports.deleteService = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -174,6 +198,7 @@ exports.deleteService = async (req, res) => {
   }
 };
 
+// Search services with advanced filtering, sorting, and pagination
 exports.searchServices = catchAsync(async (req, res, next) => {
   // 1. Filtering
   const queryObj = { ...req.query };
@@ -253,3 +278,55 @@ exports.searchServices = catchAsync(async (req, res, next) => {
     data: { services },
   });
 });
+
+// Update specific service availability time
+exports.updateServiceAvailabilityTime = async (req, res) => {
+  const { day, startTime, endTime } = req.body;
+
+  const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+  // Validate time format
+  if (!isValidTime(startTime) || !isValidTime(endTime)) {
+    return res
+      .status(400)
+      .json({ error: "startTime and endTime must be in HH:mm format" });
+  }
+
+  // Validate day
+  if (!VALID_DAYS.includes(day)) {
+    return res.status(400).json({ error: "Invalid day" });
+  }
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid Service ID" });
+    }
+
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    const daysToUpdate = day === "Monday-Friday" ? weekdays : [day];
+
+    daysToUpdate.forEach((d) => {
+      const index = service.availability.findIndex((slot) => slot.day === d);
+      if (index !== -1) {
+        service.availability[index].startTime = startTime;
+        service.availability[index].endTime = endTime;
+      } else {
+        service.availability.push({ day: d, startTime, endTime });
+      }
+    });
+
+    await service.save();
+
+    res.status(200).json({
+      message: `Availability for ${day} updated successfully`,
+      availability: service.availability,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
