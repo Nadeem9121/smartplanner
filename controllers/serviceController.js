@@ -118,7 +118,10 @@ exports.createService = async (req, res) => {
   }
 
   try {
-    const newService = new Service(req.body);
+    const newService = new Service({
+      ...req.body,
+      vendor: req.user.id, // ← bind to the logged-in vendor
+    });
     await newService.save();
     res.status(201).json(newService);
   } catch (err) {
@@ -129,9 +132,29 @@ exports.createService = async (req, res) => {
 
 // Get all services
 exports.getServices = async (req, res) => {
+  const vendorId = req.user.id;
   try {
-    const services = await Service.find();
+    const services = await Service.find()
+      .find({ vendor: vendorId }) // ← only this vendor’s services
+      .sort("-createdAt")
+      .select("-__v");
     res.json({ length: services.length, services });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+// Public: get every service (for customers/users)
+exports.getAllServicesPublic = async (req, res) => {
+  try {
+    const services = await Service.find() // no vendor filter
+      .sort("-createdAt")
+      .select("-__v");
+
+    res.status(200).json({
+      length: services.length,
+      services,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

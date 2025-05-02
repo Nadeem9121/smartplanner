@@ -6,6 +6,8 @@ const { protect, restrictTo } = require("../controllers/authController");
 // All routes below require the user to be authenticated.
 router.use(protect);
 
+router.get("/public", serviceController.getAllServicesPublic);
+
 // Route for advanced searching/filtering services
 // Placed before '/:id' to avoid param conflicts
 router.get("/search", serviceController.searchServices);
