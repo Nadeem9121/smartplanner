@@ -7,7 +7,7 @@ const galleryController = require("../controllers/galleryController");
 
 // All gallery routes require authentication and vendor role
 router.use(protect);
-router.use(restrictTo("vendor"));
+//router.use(restrictTo("vendor"));
 
 // Upload a single photo (field name: 'photo')
 router.post("/post-img", upload.single("photo"), galleryController.uploadImage);
