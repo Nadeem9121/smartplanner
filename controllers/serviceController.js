@@ -1,5 +1,7 @@
 const Service = require("../models/serviceModel");
 const catchAsync = require("../utils/catchAsync");
+const User = require("../models/userModel");
+const GalleryImage = require("../models/galleryModel");
 const mongoose = require("mongoose");
 
 // Define valid days for availability
@@ -353,3 +355,37 @@ exports.updateServiceAvailabilityTime = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+exports.getVendorProfile = async (req, res) => {
+  const { vendorId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+    return res.status(400).json({ error: "Invalid vendor ID" });
+  }
+
+  try {
+    // Get vendor info (without password or sensitive data)
+    const vendor = await User.findById(vendorId).select("-password -__v");
+    if (!vendor) {
+      return res.status(404).json({ error: "Vendor not found" });
+    }
+
+    // Get vendor's services
+    const services = await Service.find({ vendor: vendorId }).select("-__v");
+
+    // Get vendor's gallery images
+    const gallery = await GalleryImage.find({ vendor: vendorId }).select(
+      "-__v"
+    );
+
+    // Combine all into one response
+    res.status(200).json({
+      vendor,
+      services,
+      gallery,
+    });
+  } catch (err) {
+    console.error("Error fetching vendor profile:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+exports.getAllBidsOfVendor = async (req, res) => {};

@@ -20,6 +20,8 @@ router
   .patch(bidController.updateBid)
   .delete(bidController.deleteBid);
 
+router.get("/vendor/:vendorId", bidController.getBidsByVendorId);
+
 /**
  * Provider routes:
  * - Accept (assign) a bid

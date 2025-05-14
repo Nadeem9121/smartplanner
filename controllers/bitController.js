@@ -135,3 +135,22 @@ exports.assignBid = catchAsync(async (req, res, next) => {
 
   res.status(200).json({ status: "success", data: bid });
 });
+// GET /api/v1/bids/vendor/:vendorId — Get all bids assigned to a vendor
+exports.getBidsByVendorId = catchAsync(async (req, res, next) => {
+  const { vendorId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+    return next(new AppError("Invalid Vendor ID", 400));
+  }
+
+  const bids = await Bid.find({ assignedTo: vendorId }).populate(
+    "requester",
+    "name email"
+  );
+
+  res.status(200).json({
+    status: "success",
+    results: bids.length,
+    data: { bids },
+  });
+});
