@@ -149,13 +149,24 @@ exports.getServices = async (req, res) => {
 // Public: get every service (for customers/users)
 exports.getAllServicesPublic = async (req, res) => {
   try {
-    const services = await Service.find() // no vendor filter
-      .sort("-createdAt")
-      .select("-__v");
+    const services = await Service.find().sort("-createdAt").select("-__v");
+
+    // Fetch gallery for each vendor
+    const servicesWithGallery = await Promise.all(
+      services.map(async (service) => {
+        const gallery = await GalleryImage.find({
+          vendor: service.vendor,
+        }).sort("-createdAt");
+        return {
+          ...service.toObject(),
+          gallery,
+        };
+      })
+    );
 
     res.status(200).json({
-      length: services.length,
-      services,
+      length: servicesWithGallery.length,
+      services: servicesWithGallery,
     });
   } catch (err) {
     console.error(err);
