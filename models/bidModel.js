@@ -58,6 +58,22 @@ const bidSchema = new mongoose.Schema(
       default: "pending",
     },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+    // Quotes array for vendor bids
+    quotes: [
+      {
+        vendor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        amount: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+      },
+    ],
   },
   { timestamps: true, versionKey: false }
 );

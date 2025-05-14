@@ -5,7 +5,7 @@ const { protect, restrictTo } = require("../controllers/authController");
 
 // All routes below require the user to be authenticated.
 router.use(protect);
-// router.get("/profile/:vendorId", serviceController.getVendorProfile);
+router.get("/profile/:vendorId", serviceController.getVendorProfile);
 
 router.get("/vendor/:vendorId", serviceController.getVendorProfile);
 

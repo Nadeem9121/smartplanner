@@ -154,3 +154,79 @@ exports.getBidsByVendorId = catchAsync(async (req, res, next) => {
     data: { bids },
   });
 });
+// controllers/bidController.js
+exports.placeBidAmount = catchAsync(async (req, res, next) => {
+  const { amount } = req.body; // Only amount
+  const { id: bidId } = req.params;
+
+  if (req.user.role !== "vendor") {
+    return next(new AppError("Only vendors can place quotes", 403));
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(bidId)) {
+    return next(new AppError("Invalid Bid ID", 400));
+  }
+
+  const bid = await Bid.findById(bidId);
+  if (!bid) return next(new AppError("Bid not found", 404));
+
+  // Check if vendor already quoted
+  const alreadyQuoted = bid.quotes.some((q) => q.vendor.equals(req.user._id));
+  if (alreadyQuoted) {
+    return next(
+      new AppError("You have already submitted a quote for this bid", 400)
+    );
+  }
+
+  // Add the quote with only the amount
+  bid.quotes.push({
+    vendor: req.user._id,
+    amount,
+  });
+
+  await bid.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Quote submitted successfully",
+    data: bid,
+  });
+});
+// controllers/bidController.js
+exports.editQuote = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { amount } = req.body;
+
+  if (!amount || amount <= 0) {
+    return next(
+      new AppError("Invalid amount. Please provide a valid amount.", 400)
+    );
+  }
+
+  // Find the bid
+  const bid = await Bid.findById(id);
+  if (!bid) {
+    return next(new AppError("Bid not found", 404));
+  }
+
+  // Check if vendor is already in quotes
+  const vendorQuoteIndex = bid.quotes.findIndex(
+    (quote) => quote.vendor.toString() === req.user._id.toString()
+  );
+
+  if (vendorQuoteIndex !== -1) {
+    // If vendor already exists, update the quote
+    bid.quotes[vendorQuoteIndex].amount = amount;
+  } else {
+    // If vendor does not exist, add a new quote
+    bid.quotes.push({ vendor: req.user._id, amount });
+  }
+
+  await bid.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Quote updated successfully",
+    data: bid,
+  });
+});

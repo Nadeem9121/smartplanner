@@ -1,4 +1,3 @@
-// routes/bidRoutes.js
 const express = require("express");
 const router = express.Router();
 const bidController = require("../controllers/bitController");
@@ -27,5 +26,13 @@ router.get("/vendor/:vendorId", bidController.getBidsByVendorId);
  * - Accept (assign) a bid
  */
 router.post("/:id/assign", restrictTo("vendor"), bidController.assignBid);
+
+/**
+ * Vendor routes:
+ * - Submit a quote/amount for a bid
+ */
+router.post("/:id/quote", restrictTo("vendor"), bidController.placeBidAmount);
+// routes/bidRoutes.js
+router.patch("/:id/quote", bidController.editQuote);
 
 module.exports = router;

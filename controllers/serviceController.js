@@ -149,7 +149,40 @@ exports.getServices = async (req, res) => {
 // Public: get every service (for customers/users)
 exports.getAllServicesPublic = async (req, res) => {
   try {
-    const services = await Service.find().sort("-createdAt").select("-__v");
+    // 1. Build query object for filtering
+    const queryObj = { ...req.query };
+    const excludedFields = ["page", "sort", "limit", "fields"];
+    excludedFields.forEach((el) => delete queryObj[el]);
+
+    // 2. Advanced filtering (e.g., price[gte]=500)
+    let queryStr = JSON.stringify(queryObj);
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
+    let query = Service.find(JSON.parse(queryStr));
+
+    // 3. Sorting
+    if (req.query.sort) {
+      const sortBy = req.query.sort.split(",").join(" ");
+      query = query.sort(sortBy);
+    } else {
+      query = query.sort("-createdAt"); // Default sort
+    }
+
+    // 4. Field limiting
+    if (req.query.fields) {
+      const fields = req.query.fields.split(",").join(" ");
+      query = query.select(fields);
+    } else {
+      query = query.select("-__v");
+    }
+
+    // 5. Pagination
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    query = query.skip(skip).limit(limit);
+
+    // Execute query
+    const services = await query;
 
     // Fetch gallery for each vendor
     const servicesWithGallery = await Promise.all(

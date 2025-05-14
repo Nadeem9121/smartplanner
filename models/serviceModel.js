@@ -30,13 +30,16 @@ const serviceSchema = new mongoose.Schema(
       required: [true, "Service description is required"],
       trim: true,
     },
+    location: {
+      type: String,
+      required: [true, "Service location is required"],
+      trim: true,
+    },
     availability: [
       {
-        // Modify to support a time range for Monday to Friday.
-        // If day is 'Monday-Friday', it will apply to all weekdays.
         day: {
           type: String,
-          enum: [...VALID_DAYS, "Monday-Friday"], // Add "Monday-Friday" as a valid option
+          enum: [...VALID_DAYS, "Monday-Friday"],
           required: true,
         },
         startTime: {
